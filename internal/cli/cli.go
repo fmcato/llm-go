@@ -10,12 +10,13 @@ import (
 
 // CLI handles command-line interface operations
 type CLI struct {
-	hideThinking  bool
-	model         string
-	temperature   float64
-	outputJson    bool
-	showModelInfo bool
-	reader        *bufio.Reader
+	hideThinking     bool
+	model            string
+	temperature      float64
+	outputJson       bool
+	showModelInfo    bool
+	systemPromptFile string
+	reader           *bufio.Reader
 }
 
 // NewCLI creates a new CLI instance
@@ -32,6 +33,7 @@ func (c *CLI) ParseFlags() {
 	flag.Float64Var(&c.temperature, "temperature", 0.0, "Temperature for completions (0.0-2.0)")
 	flag.BoolVar(&c.outputJson, "json", false, "Output response as JSON")
 	flag.BoolVar(&c.showModelInfo, "model-info", false, "Display detailed model information")
+	flag.StringVar(&c.systemPromptFile, "system-prompt", "", "File containing system prompt (optional)")
 	flag.Parse()
 }
 
@@ -55,17 +57,14 @@ func (c *CLI) GetJSON() bool {
 	return c.outputJson
 }
 
-// GetSystemPromptFile returns the system prompt file path from command-line arguments
+// GetSystemPromptFile returns the system prompt file path
 func (c *CLI) GetSystemPromptFile() string {
-	if flag.NArg() < 1 {
-		return ""
-	}
-	return flag.Arg(0)
+	return c.systemPromptFile
 }
 
 // ShowUsage displays usage information
 func (c *CLI) ShowUsage() {
-	fmt.Println("Usage: llm-go [options] <system-prompt-file>")
+	fmt.Println("Usage: llm-go [options]")
 	fmt.Println("Options:")
 	flag.PrintDefaults()
 	fmt.Println("\nEnvironment Variables:")

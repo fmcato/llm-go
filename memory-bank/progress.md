@@ -8,7 +8,7 @@
 - ✅ Error handling for API connections and user input
 - ✅ Support for custom API endpoints (Ollama, local servers)
 - ✅ Model selection via configuration
-- ✅ System prompt customization via file input
+- ✅ System prompt customization via file input (now optional)
 - ✅ Temperature parameter configuration (0.0-2.0 range)
 - ✅ Hide-thinking flag for filtering response content
 - ✅ Conversation history within a single session
@@ -22,6 +22,8 @@
 - ✅ Advanced token usage and timing statistics
 - ✅ JSON output mode for machine-readable responses
 - ✅ Enhanced error handling and user feedback
+- ✅ **Optional system prompt**: Users can now run without a system prompt (uses model default) or specify via `--system-prompt` flag
+- ✅ **Enhanced JSON output**: Machine-readable responses with detailed statistics for scripting and automation
 
 ## What's Left to Build
 - 🔲 Unit and integration tests
@@ -79,6 +81,8 @@ The core LLM client functionality is complete and working. The application succe
 - Created LLMClient struct for better code organization
 - Enhanced conversation storage by removing thinking blocks from memory while preserving display functionality
 - Refactored main.go into distinct functional components (initialization, input, processing, output)
+- **Made system prompt optional**: Added `--system-prompt` flag and removed positional argument requirement
+- **Enhanced JSON output**: Added `--json` flag for machine-readable responses with detailed statistics
 
 ## Future Enhancements
 - Advanced configuration options (max tokens, top-p, frequency penalty, etc.)

@@ -18,6 +18,8 @@ Completed refactoring the codebase to use an internal package structure for bett
   - `internal/cli` - Command-line interface handling
 - ✅ **Enhanced conversation storage**: Removed thinking blocks from stored responses while preserving display functionality
 - ✅ **Refactored main.go**: Split into focused functions for initialization, input handling, response processing, and output display
+- ✅ **Made system prompt optional**: Added `--system-prompt` flag and removed positional argument requirement
+- ✅ **Enhanced JSON output**: Added `--json` flag for machine-readable responses with detailed statistics
 
 ## Next Steps
 1. **Testing Implementation**:

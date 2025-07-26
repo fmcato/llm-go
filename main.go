@@ -93,19 +93,20 @@ func initCLI() *cli.CLI {
 
 // loadConfig validates inputs and loads configuration
 func loadConfig(cliHandler *cli.CLI) *config.Config {
+	var systemPrompt string
+
 	// Check if system prompt file path is provided as argument
 	systemPromptFile := cliHandler.GetSystemPromptFile()
-	if systemPromptFile == "" {
-		cliHandler.ShowUsage()
-		os.Exit(1)
+	if systemPromptFile != "" {
+		// Read system prompt from file
+		var err error
+		systemPrompt, err = config.ReadSystemPrompt(systemPromptFile)
+		if err != nil {
+			cliHandler.ShowError(err)
+			os.Exit(1)
+		}
 	}
-
-	// Read system prompt from file
-	systemPrompt, err := config.ReadSystemPrompt(systemPromptFile)
-	if err != nil {
-		cliHandler.ShowError(err)
-		os.Exit(1)
-	}
+	// If no system prompt file is provided, systemPrompt remains empty
 
 	// Load configuration with system prompt, model, and temperature
 	cfg := config.LoadConfig(systemPrompt, cliHandler.GetModel(), cliHandler.GetTemperature())
@@ -136,8 +137,10 @@ func initLLMClient(cfg *config.Config) *llm.Client {
 func initMemory(cfg *config.Config) *memory.Memory {
 	// Create memory for conversation history
 	mem := memory.NewMemory()
-	// Initialize conversation history with system message
-	mem.AddSystemMessage(cfg.SystemPrompt)
+	// Initialize conversation history with system message if provided
+	if cfg.SystemPrompt != "" {
+		mem.AddSystemMessage(cfg.SystemPrompt)
+	}
 	return mem
 }
 

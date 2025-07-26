@@ -29,10 +29,14 @@
 
 4. **Running the Application**:
    ```bash
-   go run main.go system-prompt.txt
+   go run main.go
+   # or with system prompt:
+   go run main.go --system-prompt system-prompt.txt
    # or
    go build -o llm-go
-   ./llm-go system-prompt.txt
+   ./llm-go
+   # or with system prompt:
+   ./llm-go --system-prompt system-prompt.txt
    ```
 
 ## Technical Constraints
@@ -98,7 +102,8 @@
 
 ### Command Line Flags
 - `--hide-thinking` - Hide thinking/reasoning parts of responses
-- `system-prompt-file` - Path to system prompt file (required positional argument)
+- `--system-prompt` - Path to system prompt file (optional)
+- `--json` - Output response as JSON with detailed statistics
 
 ## Build Configuration
 ### go.mod
