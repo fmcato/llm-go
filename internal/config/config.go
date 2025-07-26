@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -82,11 +83,26 @@ func LoadConfig(systemPrompt, cliModel string, cliTemperature float64) Config {
 	}
 }
 
+// formatCurrentDateTime returns current datetime in "1 September 2025, 10:17 AM" format
+func formatCurrentDateTime() string {
+	now := time.Now()
+	// Format day with ordinal suffix
+	day := now.Day()
+
+	// Format the complete string
+	return fmt.Sprintf("%d %s %d, %s",
+		day,
+		now.Month().String(),
+		now.Year(),
+		now.Format("3:04 PM"))
+}
+
 // ReadSystemPrompt reads the system prompt from a file
 func ReadSystemPrompt(filePath string) (string, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read system prompt file: %w", err)
 	}
-	return strings.TrimSpace(string(content)), nil
+	prompt := strings.TrimSpace(string(content))
+	return strings.ReplaceAll(prompt, "{{currentDateTime}}", formatCurrentDateTime()), nil
 }
