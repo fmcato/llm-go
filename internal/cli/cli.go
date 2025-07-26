@@ -10,11 +10,12 @@ import (
 
 // CLI handles command-line interface operations
 type CLI struct {
-	hideThinking bool
-	model        string
-	temperature  float64
-	outputJson   bool
-	reader       *bufio.Reader
+	hideThinking  bool
+	model         string
+	temperature   float64
+	outputJson    bool
+	showModelInfo bool
+	reader        *bufio.Reader
 }
 
 // NewCLI creates a new CLI instance
@@ -30,6 +31,7 @@ func (c *CLI) ParseFlags() {
 	flag.StringVar(&c.model, "model", "", "Model to use for completions")
 	flag.Float64Var(&c.temperature, "temperature", 0.0, "Temperature for completions (0.0-2.0)")
 	flag.BoolVar(&c.outputJson, "json", false, "Output response as JSON")
+	flag.BoolVar(&c.showModelInfo, "model-info", false, "Display detailed model information")
 	flag.Parse()
 }
 
@@ -95,4 +97,9 @@ func (c *CLI) ShouldQuit(message string) bool {
 // IsValidMessage checks if the message is valid (not empty)
 func (c *CLI) IsValidMessage(message string) bool {
 	return message != ""
+}
+
+// GetShowModelInfo returns the model-info flag value
+func (c *CLI) GetShowModelInfo() bool {
+	return c.showModelInfo
 }

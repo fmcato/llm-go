@@ -14,14 +14,16 @@
 - ✅ Conversation history within a single session
 - ✅ Clean separation of concerns with LLMClient struct
 - ✅ **Refactored internal package structure**:
-  - `internal/llm` - OpenAI client interface and implementation
+  - `internal/llm` - OpenAI client interface and implementation with token tracking
   - `internal/config` - Configuration management
   - `internal/memory` - Conversation history management
   - `internal/cli` - Command-line interface handling
 - ✅ Refactored main.go with clear functional separation
+- ✅ Advanced token usage and timing statistics
+- ✅ JSON output mode for machine-readable responses
+- ✅ Enhanced error handling and user feedback
 
 ## What's Left to Build
-- 🔄 Refactor code to have an internal package to interface with OpenAI
 - 🔲 Unit and integration tests
 - 🔲 Documentation improvements
 - 🔲 Performance optimizations
@@ -33,7 +35,7 @@
 - 🔲 Better error messages with debugging information
 
 ## Current Status
-The core LLM client functionality is complete and working. The application successfully connects to OpenAI-compatible APIs, sends messages with conversation history, and receives streaming responses. Temperature is now configurable via environment variables, and the hide-thinking flag provides basic content filtering capability.
+The core LLM client functionality is complete and working. The application successfully connects to OpenAI-compatible APIs, sends messages with conversation history, and receives streaming responses with detailed token usage and timing statistics. Temperature is now configurable via environment variables, and the hide-thinking flag provides basic content filtering capability. JSON output mode is available for machine-readable responses, and the application features a well-organized internal package structure for better maintainability.
 
 ## Known Issues
 - No conversation history retention between sessions (in-memory only)
@@ -41,6 +43,9 @@ The core LLM client functionality is complete and working. The application succe
 - No built-in rate limiting or request throttling
 - No persistent storage of conversations
 - Single-threaded execution (no concurrent requests)
+- Limited configuration validation (only temperature range checked)
+- No error handling for file I/O operations
+- Missing tests for internal packages
 
 ## Evolution of Project Decisions
 ### Phase 1: Core Implementation
