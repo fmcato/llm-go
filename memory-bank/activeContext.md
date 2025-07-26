@@ -16,6 +16,7 @@ Completed refactoring the codebase to use an internal package structure for bett
   - `internal/config` - Configuration management
   - `internal/memory` - Conversation history management
   - `internal/cli` - Command-line interface handling
+- ✅ **Enhanced conversation storage**: Removed thinking blocks from stored responses while preserving display functionality
 
 ## Next Steps
 1. **Testing Implementation**:

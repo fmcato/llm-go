@@ -58,8 +58,8 @@ internal/
 3. CLI interface is set up for user interaction
 4. User provides input via CLI
 5. Input is processed and sent to LLM via client
-6. Response is streamed back to user and stored in memory
-7. Conversation history is maintained for context
+6. Response is streamed back to user and stored in memory (with thinking blocks filtered out)
+7. Conversation history is maintained for context (excluding thinking content)
 
 ## Package Responsibilities
 ### internal/llm

@@ -3,12 +3,38 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"llm-go/internal/cli"
 	"llm-go/internal/config"
 	"llm-go/internal/llm"
 	"llm-go/internal/memory"
 )
+
+// removeThinkingBlocks removes thinking blocks (including tags and content) from responses
+// and returns only the actual response content after the thinking block
+func removeThinkingBlocks(s string) string {
+	startThinkTag := "<tool_call>"
+	endThinkTag := "</tool_call>"
+
+	startIdx := strings.Index(s, startThinkTag)
+	if startIdx == -1 {
+		return s // No thinking block found, return original
+	}
+
+	// Find the end of the thinking block
+	afterStart := s[startIdx+len(startThinkTag):]
+	endIdx := strings.Index(afterStart, endThinkTag)
+	if endIdx == -1 {
+		return s // No end tag found, return original
+	}
+
+	// Calculate position after the thinking block
+	afterEnd := startIdx + len(startThinkTag) + endIdx + len(endThinkTag)
+
+	// Return only content after the thinking block, trimmed
+	return strings.TrimSpace(s[afterEnd:])
+}
 
 func main() {
 	// Create CLI handler
@@ -112,7 +138,7 @@ func main() {
 		// Display token usage for this interaction
 		client.DisplayTokenUsage()
 
-		// Add assistant response to history
-		mem.AddAssistantMessage(response)
+		// Add assistant response to history (without thinking blocks)
+		mem.AddAssistantMessage(removeThinkingBlocks(response))
 	}
 }

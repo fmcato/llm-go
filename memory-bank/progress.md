@@ -71,6 +71,7 @@ The core LLM client functionality is complete and working. The application succe
 - Added hide-thinking flag for content filtering
 - Implemented conversation history within sessions
 - Created LLMClient struct for better code organization
+- Enhanced conversation storage by removing thinking blocks from memory while preserving display functionality
 
 ## Future Enhancements
 - Advanced configuration options (max tokens, top-p, frequency penalty, etc.)
