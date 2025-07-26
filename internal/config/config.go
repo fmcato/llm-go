@@ -18,8 +18,8 @@ type Config struct {
 	SystemPrompt string
 }
 
-// LoadConfig loads configuration from environment variables
-func LoadConfig(systemPrompt string) Config {
+// LoadConfig loads configuration with CLI arguments taking precedence over environment variables
+func LoadConfig(systemPrompt, cliModel string, cliTemperature float64) Config {
 	// Load .env file if it exists
 	_ = godotenv.Load()
 
@@ -33,9 +33,13 @@ func LoadConfig(systemPrompt string) Config {
 		baseURL = "https://api.openai.com/v1"
 	}
 
-	model := os.Getenv("OPENAI_MODEL")
+	// Prioritize CLI model over environment variable
+	model := cliModel
 	if model == "" {
-		model = "gpt-4o"
+		model = os.Getenv("OPENAI_MODEL")
+		if model == "" {
+			model = "gpt-4o"
+		}
 	}
 
 	// Use the provided system prompt instead of environment variable
@@ -43,19 +47,29 @@ func LoadConfig(systemPrompt string) Config {
 		systemPrompt = "You are a helpful assistant."
 	}
 
-	// Parse temperature with default value of 0.7
-	temperatureStr := os.Getenv("OPENAI_TEMPERATURE")
+	// Prioritize CLI temperature over environment variable
 	temperature := 0.7 // default temperature
-	if temperatureStr != "" {
-		if parsedTemp, err := strconv.ParseFloat(temperatureStr, 64); err == nil {
-			// Validate temperature range (0.0 to 2.0)
-			if parsedTemp >= 0.0 && parsedTemp <= 2.0 {
-				temperature = parsedTemp
-			} else {
-				fmt.Printf("Warning: Temperature value %f is outside valid range (0.0-2.0), using default 0.7\n", parsedTemp)
-			}
+	if cliTemperature != 0.0 {
+		// Validate temperature range (0.0 to 2.0)
+		if cliTemperature >= 0.0 && cliTemperature <= 2.0 {
+			temperature = cliTemperature
 		} else {
-			fmt.Printf("Warning: Invalid temperature value '%s', using default 0.7\n", temperatureStr)
+			fmt.Printf("Warning: Temperature value %f is outside valid range (0.0-2.0), using default 0.7\n", cliTemperature)
+		}
+	} else {
+		// Fall back to environment variable
+		temperatureStr := os.Getenv("OPENAI_TEMPERATURE")
+		if temperatureStr != "" {
+			if parsedTemp, err := strconv.ParseFloat(temperatureStr, 64); err == nil {
+				// Validate temperature range (0.0 to 2.0)
+				if parsedTemp >= 0.0 && parsedTemp <= 2.0 {
+					temperature = parsedTemp
+				} else {
+					fmt.Printf("Warning: Temperature value %f is outside valid range (0.0-2.0), using default 0.7\n", parsedTemp)
+				}
+			} else {
+				fmt.Printf("Warning: Invalid temperature value '%s', using default 0.7\n", temperatureStr)
+			}
 		}
 	}
 

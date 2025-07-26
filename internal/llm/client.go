@@ -48,6 +48,14 @@ type Config struct {
 	SystemPrompt string
 }
 
+// Stats holds token and timing statistics for LLM interactions
+type Stats struct {
+	InputTokens  int
+	OutputTokens int
+	ThinkingTime time.Duration
+	ResponseTime time.Duration
+}
+
 // NewClient creates a new LLM client with the given configuration
 func NewClient(config Config) *Client {
 	client := openai.NewClient(
@@ -87,11 +95,21 @@ func (c *Client) DisplayTokenUsage() {
 
 // DisplayTotalUsage shows the total token usage across all interactions
 func (c *Client) DisplayTotalUsage() {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
 	fmt.Printf("\nTotal tokens used: Input %d | Output %d | Combined %d\n",
 		c.totalInputTokens, c.totalOutputTokens,
 		c.totalInputTokens+c.totalOutputTokens)
+}
+
+// GetStats returns the current interaction statistics
+func (c *Client) GetStats() Stats {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return Stats{
+		InputTokens:  c.currentInputTokens,
+		OutputTokens: c.currentOutputTokens,
+		ThinkingTime: c.thinkingDuration,
+		ResponseTime: c.responseDuration,
+	}
 }
 
 // StreamResponse sends a message with conversation history and streams the response

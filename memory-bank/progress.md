@@ -18,6 +18,7 @@
   - `internal/config` - Configuration management
   - `internal/memory` - Conversation history management
   - `internal/cli` - Command-line interface handling
+- ✅ Refactored main.go with clear functional separation
 
 ## What's Left to Build
 - 🔄 Refactor code to have an internal package to interface with OpenAI
@@ -72,6 +73,7 @@ The core LLM client functionality is complete and working. The application succe
 - Implemented conversation history within sessions
 - Created LLMClient struct for better code organization
 - Enhanced conversation storage by removing thinking blocks from memory while preserving display functionality
+- Refactored main.go into distinct functional components (initialization, input, processing, output)
 
 ## Future Enhancements
 - Advanced configuration options (max tokens, top-p, frequency penalty, etc.)

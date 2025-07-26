@@ -43,6 +43,9 @@ internal/
 - **LLM Client** → **Memory**: Integrates with memory for conversation context
 - **Config** ↔ **Environment**: Loads settings from environment variables/.env
 - **CLI** → **Config**: Provides runtime configuration overrides
+- **runConversationLoop** → **handleUserInput**: Processes user input and exit signals
+- **runConversationLoop** → **processResponse**: Handles LLM response streaming
+- **runConversationLoop** → **displayResults**: Formats and outputs responses
 
 ## Critical Implementation Paths
 1. **Configuration Management**: Robust loading and validation of API settings
@@ -96,6 +99,7 @@ internal/
 - **Hide-thinking**: CLI flag for content filtering
 - **System Prompt**: Loaded from file for flexibility
 - **Conversation History**: Maintained in-memory during sessions with proper message management
+- **Refactored main.go**: Decomposed into focused functions (initCLI, loadConfig, initLLMClient, initMemory, runConversationLoop) for better readability and maintainability
 
 ## Future Architecture Enhancements
 - **Plugin System**: Extensible architecture for custom LLM providers
