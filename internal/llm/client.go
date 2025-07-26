@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
@@ -26,7 +27,16 @@ type Client struct {
 	totalOutputTokens   int
 	currentInputTokens  int
 	currentOutputTokens int
-	mutex               sync.Mutex
+
+	// Time tracking
+	startTime        time.Time
+	endTime          time.Time
+	thinkingStart    time.Time
+	thinkingDuration time.Duration
+	responseStart    time.Time
+	responseDuration time.Duration
+
+	mutex sync.Mutex
 }
 
 // Config holds the configuration for the LLM client
@@ -58,6 +68,21 @@ func (c *Client) DisplayTokenUsage() {
 	fmt.Printf("\nTokens: Input %d | Output %d | Total %d\n",
 		c.currentInputTokens, c.currentOutputTokens,
 		c.currentInputTokens+c.currentOutputTokens)
+
+	// Display time statistics
+	totalTime := c.endTime.Sub(c.startTime)
+	if totalTime > 0 {
+		if c.thinkingDuration > 0 || c.responseDuration > 0 {
+			// Show detailed breakdown when thinking is present
+			fmt.Printf("Time: Thinking %v | Response %v | Total %v\n",
+				c.thinkingDuration.Round(time.Millisecond),
+				c.responseDuration.Round(time.Millisecond),
+				(c.thinkingDuration + c.responseDuration).Round(time.Millisecond))
+		} else {
+			// Show simple total time when no thinking breakdown
+			fmt.Printf("Time: %v\n", totalTime.Round(time.Millisecond))
+		}
+	}
 }
 
 // DisplayTotalUsage shows the total token usage across all interactions
@@ -72,10 +97,13 @@ func (c *Client) DisplayTotalUsage() {
 // StreamResponse sends a message with conversation history and streams the response
 // while concurrently sending chunks to the provided channel
 func (c *Client) StreamResponse(messages []openai.ChatCompletionMessageParamUnion, hideThinking bool, chunkChan chan<- string) (string, error) {
-	// Reset current interaction token counts
+	// Reset current interaction token counts and timing
 	c.mutex.Lock()
 	c.currentInputTokens = 0
 	c.currentOutputTokens = 0
+	c.startTime = time.Now()
+	c.thinkingDuration = 0
+	c.responseDuration = 0
 	c.mutex.Unlock()
 
 	// Create streaming chat completion with usage tracking
@@ -90,6 +118,7 @@ func (c *Client) StreamResponse(messages []openai.ChatCompletionMessageParamUnio
 
 	var fullResponse strings.Builder
 	var inThinkingBlock bool
+	var responseStarted bool
 
 	for stream.Next() {
 		chunk := stream.Current()
@@ -113,10 +142,38 @@ func (c *Client) StreamResponse(messages []openai.ChatCompletionMessageParamUnio
 		}
 		text := delta.Content
 
+		// Start timing the first non-empty response content
+		if !responseStarted && text != "" {
+			c.mutex.Lock()
+			if c.responseStart.IsZero() {
+				c.responseStart = time.Now()
+			}
+			c.mutex.Unlock()
+			responseStarted = true
+		}
+
+		// Handle thinking block transitions with timing
 		if !inThinkingBlock && text == startThinkTag {
+			// Entering thinking block - record response duration so far
+			c.mutex.Lock()
+			if !c.responseStart.IsZero() {
+				c.responseDuration += time.Since(c.responseStart)
+				c.responseStart = time.Time{} // Reset for next response segment
+			}
+			c.thinkingStart = time.Now()
+			c.mutex.Unlock()
 			inThinkingBlock = true
 		}
+
 		if inThinkingBlock && text == endThinkTag {
+			// Exiting thinking block - record thinking duration
+			c.mutex.Lock()
+			if !c.thinkingStart.IsZero() {
+				c.thinkingDuration += time.Since(c.thinkingStart)
+				c.thinkingStart = time.Time{} // Reset for next thinking segment
+			}
+			c.responseStart = time.Now() // Start timing response after thinking
+			c.mutex.Unlock()
 			inThinkingBlock = false
 			if hideThinking {
 				continue
@@ -131,8 +188,21 @@ func (c *Client) StreamResponse(messages []openai.ChatCompletionMessageParamUnio
 			}
 			fullResponse.WriteString(text)
 		}
-
 	}
+
+	// Record final timing when streaming completes
+	c.mutex.Lock()
+	c.endTime = time.Now()
+
+	// Record final duration for active block
+	if !c.thinkingStart.IsZero() {
+		// Still in thinking block at end
+		c.thinkingDuration += time.Since(c.thinkingStart)
+	} else if !c.responseStart.IsZero() {
+		// Still in response block at end
+		c.responseDuration += time.Since(c.responseStart)
+	}
+	c.mutex.Unlock()
 
 	// Close channel if provided
 	if chunkChan != nil {

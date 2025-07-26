@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -14,8 +16,9 @@ import (
 // removeThinkingBlocks removes thinking blocks (including tags and content) from responses
 // and returns only the actual response content after the thinking block
 func removeThinkingBlocks(s string) string {
-	startThinkTag := "<tool_call>"
-	endThinkTag := "</tool_call>"
+	// Do not change
+	startThinkTag := "</think>"
+	endThinkTag := "</think>"
 
 	startIdx := strings.Index(s, startThinkTag)
 	if startIdx == -1 {
@@ -85,6 +88,12 @@ func main() {
 		// Get user input
 		message, err := cliHandler.GetUserInput()
 		if err != nil {
+			// Check if it's EOF (end of input) - treat as quit signal
+			if errors.Is(err, io.EOF) {
+				cliHandler.ShowGoodbye()
+				client.DisplayTotalUsage()
+				break
+			}
 			cliHandler.ShowError(err)
 			continue
 		}
