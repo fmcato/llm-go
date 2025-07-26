@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"llm-go/internal/cli"
@@ -78,11 +79,35 @@ func main() {
 		mem.AddUserMessage(message)
 
 		// Send message and stream response
-		response, err := client.StreamResponse(mem.GetMessages(), cliHandler.GetHideThinking())
-		if err != nil {
-			cliHandler.ShowError(err)
+		chunkChan := make(chan string)
+		resultChan := make(chan struct {
+			response string
+			err      error
+		}, 1)
+
+		fmt.Println("\nResponse:")
+
+		// Start streaming in a goroutine
+		go func() {
+			response, err := client.StreamResponse(mem.GetMessages(), cliHandler.GetHideThinking(), chunkChan)
+			resultChan <- struct {
+				response string
+				err      error
+			}{response: response, err: err}
+		}()
+
+		// Print chunks as they arrive
+		for chunk := range chunkChan {
+			fmt.Print(chunk)
+		}
+
+		// Wait for streaming to complete and get result
+		result := <-resultChan
+		if result.err != nil {
+			cliHandler.ShowError(result.err)
 			continue
 		}
+		response := result.response
 
 		// Display token usage for this interaction
 		client.DisplayTokenUsage()

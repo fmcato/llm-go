@@ -11,6 +11,11 @@ import (
 	"github.com/openai/openai-go/packages/param"
 )
 
+const (
+	startThinkTag = "<think>"
+	endThinkTag   = "</think>"
+)
+
 // Client wraps the OpenAI client with additional functionality
 type Client struct {
 	client *openai.Client
@@ -65,7 +70,8 @@ func (c *Client) DisplayTotalUsage() {
 }
 
 // StreamResponse sends a message with conversation history and streams the response
-func (c *Client) StreamResponse(messages []openai.ChatCompletionMessageParamUnion, hideThinking bool) (string, error) {
+// while concurrently sending chunks to the provided channel
+func (c *Client) StreamResponse(messages []openai.ChatCompletionMessageParamUnion, hideThinking bool, chunkChan chan<- string) (string, error) {
 	// Reset current interaction token counts
 	c.mutex.Lock()
 	c.currentInputTokens = 0
@@ -82,12 +88,9 @@ func (c *Client) StreamResponse(messages []openai.ChatCompletionMessageParamUnio
 		},
 	})
 
-	// Display streaming response
-	fmt.Println("\nResponse:")
-
 	var fullResponse strings.Builder
+	var inThinkingBlock bool
 
-	inThinkingBlock := false
 	for stream.Next() {
 		chunk := stream.Current()
 
@@ -110,32 +113,30 @@ func (c *Client) StreamResponse(messages []openai.ChatCompletionMessageParamUnio
 		}
 		text := delta.Content
 
-		// If hide-thinking is enabled, filter out thinking parts
-		// For this implementation, we'll display all content as-is
-		// A more sophisticated implementation could look for specific markers
-		if hideThinking {
-			if text == "start_think" {
-				inThinkingBlock = true
+		if !inThinkingBlock && text == startThinkTag {
+			inThinkingBlock = true
+		}
+		if inThinkingBlock && text == endThinkTag {
+			inThinkingBlock = false
+			if hideThinking {
+				continue
 			}
+		}
 
-			// Process the text based on thinking block state
-			if inThinkingBlock {
-				// Look for end_think in this or subsequent chunks
-				if text == "end_think" {
-					inThinkingBlock = false
-				}
-				// If no end_think found, skip the entire chunk (still in thinking block)
-			} else {
-				// No thinking block or already exited - print everything
-				fmt.Print(text)
-				fullResponse.WriteString(text)
+		if !hideThinking || !inThinkingBlock {
+			// Not hiding thinking - send everything
+			// Send chunk to channel if provided
+			if chunkChan != nil {
+				chunkChan <- text
 			}
-		} else {
-			// Not hiding thinking - print everything
-			fmt.Print(text)
 			fullResponse.WriteString(text)
 		}
 
+	}
+
+	// Close channel if provided
+	if chunkChan != nil {
+		close(chunkChan)
 	}
 
 	if err := stream.Err(); err != nil {
