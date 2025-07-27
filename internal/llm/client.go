@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -251,126 +249,15 @@ func (c *Client) GetModelInfo(model string) (*openai.Model, error) {
 func (c *Client) DisplayModelInfo() error {
 	// Convert OpenAI BaseURL to Ollama BaseURL by removing /v1 suffix if present
 	ollamaBaseURL := strings.TrimSuffix(c.config.BaseURL, "/v1")
-
-	// Use direct HTTP call with authentication
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	// Get model list from Ollama API
-	modelsURL := ollamaBaseURL + "/api/tags"
-	req, err := http.NewRequest("GET", modelsURL, nil)
+	info, err := GetOllamaModelInfo(ollamaBaseURL, c.config.APIKey, c.config.Model)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return err
 	}
 
-	// Add authentication header using the OpenAI API key
-	if c.config.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+c.config.APIKey)
-	}
-
-	resp, err := client.Do(req)
+	jsonData, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to connect to Ollama API: %w", err)
+		return fmt.Errorf("failed to marshal model info: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Ollama API error %d: %s", resp.StatusCode, string(body))
-	}
-
-	var modelsResponse struct {
-		Models []struct {
-			Name string `json:"name"`
-			Size int64  `json:"size"`
-		} `json:"models"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&modelsResponse); err != nil {
-		return fmt.Errorf("failed to decode API response: %w", err)
-	}
-
-	// Find the specific model
-	var modelInfo *struct {
-		Name string `json:"name"`
-		Size int64  `json:"size"`
-	}
-
-	for _, model := range modelsResponse.Models {
-		if model.Name == c.config.Model {
-			modelInfo = &model
-			break
-		}
-	}
-
-	if modelInfo == nil {
-		fmt.Printf("Model '%s' not found on the server.\n", c.config.Model)
-		fmt.Println("Available models:")
-		for _, model := range modelsResponse.Models {
-			fmt.Printf("  - %s\n", model.Name)
-		}
-		return fmt.Errorf("model not found")
-	}
-
-	// Get detailed model information from /api/show
-	detailsURL := ollamaBaseURL + "/api/show"
-	detailsReqBody := fmt.Sprintf(`{"model":"%s"}`, c.config.Model)
-	detailsReq, err := http.NewRequest("POST", detailsURL, strings.NewReader(detailsReqBody))
-	if err != nil {
-		return fmt.Errorf("failed to create details request: %w", err)
-	}
-
-	if c.config.APIKey != "" {
-		detailsReq.Header.Set("Authorization", "Bearer "+c.config.APIKey)
-	}
-	detailsReq.Header.Set("Content-Type", "application/json")
-
-	detailsResp, err := client.Do(detailsReq)
-	var detailsResponse struct {
-		Details struct {
-			Family            string `json:"family"`
-			ParameterSize     string `json:"parameter_size"`
-			QuantizationLevel string `json:"quantization_level"`
-		} `json:"details"`
-		ModelInfo  map[string]interface{} `json:"model_info"`
-		Template   string                 `json:"template"`
-		Parameters string                 `json:"parameters"`
-	}
-
-	parameterSize := "Unknown"
-	family := "Unknown"
-	quantization := "Unknown"
-
-	var allInfo map[string]interface{}
-	if err == nil {
-		defer detailsResp.Body.Close()
-		if detailsResp.StatusCode == http.StatusOK {
-			if err := json.NewDecoder(detailsResp.Body).Decode(&detailsResponse); err == nil {
-				// Extract other details
-				if detailsResponse.Details.ParameterSize != "" {
-					parameterSize = detailsResponse.Details.ParameterSize
-				}
-				if detailsResponse.Details.Family != "" {
-					family = detailsResponse.Details.Family
-				}
-				if detailsResponse.Details.QuantizationLevel != "" {
-					quantization = detailsResponse.Details.QuantizationLevel
-				}
-				allInfo = detailsResponse.ModelInfo
-			}
-		}
-	}
-
-	fmt.Println("Model Information:")
-	fmt.Printf("  Name: %s\n", modelInfo.Name)
-	fmt.Printf("  Size: %d MB\n", modelInfo.Size/(1024*1024))
-	fmt.Printf("  Family: %s\n", family)
-	fmt.Printf("  Parameters: %s\n", parameterSize)
-	fmt.Printf("  Quantization: %s\n", quantization)
-	fmt.Printf("  API Endpoint: %s\n", ollamaBaseURL)
-	out, err := json.MarshalIndent(allInfo, "", "  ")
-	fmt.Println(string(out))
-
+	fmt.Println(string(jsonData))
 	return nil
 }
