@@ -83,14 +83,15 @@ func LoadConfig(systemPrompt, cliModel string, cliTemperature float64) Config {
 	}
 }
 
-// formatCurrentDateTime returns current datetime in "1 September 2025, 10:17 AM" format
+// formatCurrentDateTime returns current datetime in "Tuesday 1 September 2025, 10:17 AM" format
 func formatCurrentDateTime() string {
 	now := time.Now()
 	// Format day with ordinal suffix
 	day := now.Day()
 
-	// Format the complete string
-	return fmt.Sprintf("%d %s %d, %s",
+	// Format the complete string with weekday
+	return fmt.Sprintf("%s %d %s %d, %s",
+		now.Weekday().String(),
 		day,
 		now.Month().String(),
 		now.Year(),
