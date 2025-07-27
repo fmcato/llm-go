@@ -66,11 +66,11 @@ func extractThinkingBlocks(s string) string {
 
 func main() {
 	cliHandler := initCLI()
+	cfg := loadConfig(cliHandler)
+	client := initLLMClient(cfg)
 
 	// Handle model info display
 	if cliHandler.GetShowModelInfo() {
-		cfg := loadConfig(cliHandler)
-		client := initLLMClient(cfg)
 		if err := client.DisplayModelInfo(); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -78,8 +78,6 @@ func main() {
 		return
 	}
 
-	cfg := loadConfig(cliHandler)
-	client := initLLMClient(cfg)
 	mem := initMemory(cfg)
 	runConversationLoop(cliHandler, client, mem)
 }
