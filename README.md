@@ -38,6 +38,7 @@ internal/
 - Streaming response display
 - Optional hiding of thinking parts with a boolean flag
 - JSON output mode for scripting and automation
+- **Model Validation**: When using the `-model` flag, the application verifies the model exists on the Ollama server before proceeding.
 
 ## Installation
 

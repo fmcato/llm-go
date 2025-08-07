@@ -67,6 +67,21 @@ func extractThinkingBlocks(s string) string {
 func main() {
 	cliHandler := initCLI()
 	cfg := loadConfig(cliHandler)
+	// Validate model existence if model is specified
+	if cliHandler.GetModel() != "" {
+		// Convert OpenAI BaseURL to Ollama BaseURL by removing /v1 suffix
+		ollamaBaseURL := strings.TrimSuffix(cfg.BaseURL, "/v1")
+		exists, err := llm.CheckModelExists(ollamaBaseURL, cfg.APIKey, cfg.Model)
+		if err != nil {
+			fmt.Printf("Error checking model existence: %v\n", err)
+			os.Exit(1)
+		}
+		if !exists {
+			fmt.Printf("Error: Model '%s' not found on Ollama server\n", cfg.Model)
+			os.Exit(1)
+		}
+	}
+
 	client := initLLMClient(cfg)
 
 	// Handle model info display

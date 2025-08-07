@@ -27,8 +27,9 @@ func GetOllamaModelInfo(ollamaBaseURL, apiKey, model string) (*OllamaModelInfo, 
 		Timeout: 30 * time.Second,
 	}
 
-	// Get model list from Ollama API
-	modelsURL := ollamaBaseURL + "/api/tags"
+	// Properly format base URL without double slashes
+	baseURL := strings.TrimRight(ollamaBaseURL, "/")
+	modelsURL := fmt.Sprintf("%s/api/tags", baseURL)
 	req, err := http.NewRequest("GET", modelsURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -45,11 +46,21 @@ func GetOllamaModelInfo(ollamaBaseURL, apiKey, model string) (*OllamaModelInfo, 
 	}
 	defer resp.Body.Close()
 
+	// Read the entire response body to handle both JSON and non-JSON responses
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read API response: %w", err)
+	}
+
+	// Handle non-200 responses
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("model '%s' not found on server", model)
+		}
 		return nil, fmt.Errorf("Ollama API error %d: %s", resp.StatusCode, string(body))
 	}
 
+	// Try parsing as JSON regardless of content type
 	var modelsResponse struct {
 		Models []struct {
 			Name string `json:"name"`
@@ -57,8 +68,8 @@ func GetOllamaModelInfo(ollamaBaseURL, apiKey, model string) (*OllamaModelInfo, 
 		} `json:"models"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&modelsResponse); err != nil {
-		return nil, fmt.Errorf("failed to decode API response: %w", err)
+	if err := json.Unmarshal(body, &modelsResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode API response: %w. Body: %s", err, string(body))
 	}
 
 	// Find the specific model
@@ -78,8 +89,7 @@ func GetOllamaModelInfo(ollamaBaseURL, apiKey, model string) (*OllamaModelInfo, 
 		return nil, fmt.Errorf("model '%s' not found on the server", model)
 	}
 
-	// Get detailed model information from /api/show
-	detailsURL := ollamaBaseURL + "/api/show"
+	detailsURL := fmt.Sprintf("%s/api/show", baseURL)
 	detailsReqBody := fmt.Sprintf(`{"model":"%s"}`, model)
 	detailsReq, err := http.NewRequest("POST", detailsURL, strings.NewReader(detailsReqBody))
 	if err != nil {
@@ -139,4 +149,18 @@ func GetOllamaModelInfo(ollamaBaseURL, apiKey, model string) (*OllamaModelInfo, 
 	}
 
 	return info, nil
+}
+
+// CheckModelExists verifies if a model exists on the Ollama server
+func CheckModelExists(ollamaBaseURL, apiKey, model string) (bool, error) {
+	_, err := GetOllamaModelInfo(ollamaBaseURL, apiKey, model)
+	if err != nil {
+		// Check for specific "not found" error
+		if strings.Contains(err.Error(), "model not found") ||
+			strings.Contains(err.Error(), "404") {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
