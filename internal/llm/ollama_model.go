@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -163,4 +164,68 @@ func CheckModelExists(ollamaBaseURL, apiKey, model string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// PullModel pulls the specified model from the Ollama server
+func PullModel(ollamaBaseURL, apiKey, model string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	client := &http.Client{
+		Timeout: 0, // No timeout - we use context for cancellation
+	}
+
+	baseURL := strings.TrimRight(ollamaBaseURL, "/")
+	pullURL := fmt.Sprintf("%s/api/pull", baseURL)
+
+	requestBody := fmt.Sprintf(`{"name": "%s"}`, model)
+	req, err := http.NewRequestWithContext(ctx, "POST", pullURL, strings.NewReader(requestBody))
+	if err != nil {
+		return fmt.Errorf("failed to create pull request: %w", err)
+	}
+
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to connect to Ollama API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("Ollama API error %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Stream and monitor pull progress
+	decoder := json.NewDecoder(resp.Body)
+	lastStatus := ""
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			var data map[string]interface{}
+			if err := decoder.Decode(&data); err != nil {
+				if err == io.EOF {
+					return nil // Successful completion
+				}
+				return fmt.Errorf("error decoding pull response: %w", err)
+			}
+
+			if status, ok := data["status"].(string); ok {
+				if status != lastStatus {
+					fmt.Printf("Pull status: %s\n", status)
+					lastStatus = status
+				}
+			}
+
+			if errorMsg, ok := data["error"]; ok {
+				return fmt.Errorf("error during pull: %v", errorMsg)
+			}
+		}
+	}
 }

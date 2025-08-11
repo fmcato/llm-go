@@ -38,7 +38,9 @@ internal/
 - Streaming response display
 - Optional hiding of thinking parts with a boolean flag
 - JSON output mode for scripting and automation
-- **Model Validation**: When using the `-model` flag, the application verifies the model exists on the Ollama server before proceeding.
+- **Model Management**:
+  - Validation: When using the `-model` flag, the application verifies the model exists on the Ollama server before proceeding
+  - Pulling: Use the `--pull` flag to automatically download models that aren't available locally
 
 ## Installation
 
@@ -90,6 +92,12 @@ To hide thinking/reasoning parts of the response:
 
 ```bash
 ./llm-go --hide-thinking --system-prompt system-prompt.txt
+```
+
+To pull a model that isn't available locally:
+```bash
+# Pull a model before using it
+./llm-go --model mistral:7b
 ```
 
 ## JSON Output for Scripting

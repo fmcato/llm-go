@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
@@ -16,6 +17,7 @@ type CLI struct {
 	outputJson       bool
 	showModelInfo    bool
 	systemPromptFile string
+	pullModel        bool
 	reader           *bufio.Reader
 }
 
@@ -34,6 +36,7 @@ func (c *CLI) ParseFlags() {
 	flag.BoolVar(&c.outputJson, "json", false, "Output response as JSON")
 	flag.BoolVar(&c.showModelInfo, "model-info", false, "Display detailed model information")
 	flag.StringVar(&c.systemPromptFile, "system-prompt", "", "File containing system prompt (optional)")
+	flag.BoolVar(&c.pullModel, "pull", false, "Pull the model specified by --model if not available")
 	flag.Parse()
 }
 
@@ -78,9 +81,18 @@ func (c *CLI) ShowUsage() {
 func (c *CLI) GetUserInput() (string, error) {
 	message, err := c.reader.ReadString('\n')
 	if err != nil {
-		return "", fmt.Errorf("error reading input: %w", err)
+		return message, fmt.Errorf("error reading input: %w", err)
 	}
 	return strings.TrimSpace(message), nil
+}
+
+// ReadFromStdin reads all input from stdin
+func (c *CLI) ReadFromStdin() (string, error) {
+	data, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return string(data), fmt.Errorf("error reading input: %w", err)
+	}
+	return strings.TrimSpace(string(data)), nil
 }
 
 // ShowError displays an error message
@@ -101,4 +113,9 @@ func (c *CLI) IsValidMessage(message string) bool {
 // GetShowModelInfo returns the model-info flag value
 func (c *CLI) GetShowModelInfo() bool {
 	return c.showModelInfo
+}
+
+// GetPullModel returns the pull flag value
+func (c *CLI) GetPullModel() bool {
+	return c.pullModel
 }

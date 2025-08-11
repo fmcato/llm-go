@@ -67,18 +67,33 @@ func extractThinkingBlocks(s string) string {
 func main() {
 	cliHandler := initCLI()
 	cfg := loadConfig(cliHandler)
-	// Validate model existence if model is specified
+	// Handle model pulling and validation if model is specified
 	if cliHandler.GetModel() != "" {
 		// Convert OpenAI BaseURL to Ollama BaseURL by removing /v1 suffix
 		ollamaBaseURL := strings.TrimSuffix(cfg.BaseURL, "/v1")
-		exists, err := llm.CheckModelExists(ollamaBaseURL, cfg.APIKey, cfg.Model)
-		if err != nil {
-			fmt.Printf("Error checking model existence: %v\n", err)
-			os.Exit(1)
-		}
-		if !exists {
-			fmt.Printf("Error: Model '%s' not found on Ollama server\n", cfg.Model)
-			os.Exit(1)
+
+		// If --pull flag is set, attempt to pull the model first
+		if cliHandler.GetPullModel() {
+			fmt.Printf("Pulling model '%s'...\n", cfg.Model)
+			err := llm.PullModel(ollamaBaseURL, cfg.APIKey, cfg.Model)
+			if err != nil {
+				fmt.Printf("Error pulling model: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Successfully pulled model '%s'\n", cfg.Model)
+			// Skip existence check since we just pulled the model
+		} else {
+			// Validate model existence only if we didn't pull
+			exists, err := llm.CheckModelExists(ollamaBaseURL, cfg.APIKey, cfg.Model)
+			if err != nil {
+				fmt.Printf("Error checking model existence: %v\n", err)
+				os.Exit(1)
+			}
+			if !exists {
+				fmt.Printf("Error: Model '%s' not found on Ollama server\n", cfg.Model)
+				fmt.Println("You can try pulling it with the --pull flag")
+				os.Exit(1)
+			}
 		}
 	}
 
@@ -192,10 +207,14 @@ func runConversationLoop(cliHandler *cli.CLI, client *llm.Client, mem *memory.Me
 // handleUserInput gets and validates user input
 func handleUserInput(cliHandler *cli.CLI) (string, bool) {
 	// Get user input
+	var err error
+	var message string
 	if !cliHandler.GetJSON() {
 		fmt.Print("\nEnter your message (or '/quit' to exit): ")
+		message, err = cliHandler.GetUserInput()
+	} else {
+		message, err = cliHandler.ReadFromStdin()
 	}
-	message, err := cliHandler.GetUserInput()
 	if err != nil {
 		// Check if it's EOF (end of input) - treat as quit signal
 		if errors.Is(err, io.EOF) {
