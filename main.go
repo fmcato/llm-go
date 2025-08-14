@@ -194,6 +194,10 @@ func runConversationLoop(cliHandler *cli.CLI, client *llm.Client, mem *memory.Me
 		response, err := processResponse(cliHandler, client, mem)
 		if err != nil {
 			cliHandler.ShowError(err)
+			// Exit on error in non-interactive (JSON) mode
+			if cliHandler.GetJSON() {
+				break
+			}
 			continue
 		}
 
@@ -201,6 +205,11 @@ func runConversationLoop(cliHandler *cli.CLI, client *llm.Client, mem *memory.Me
 
 		// Add assistant response to history (without thinking blocks)
 		mem.AddAssistantMessage(removeThinkingBlocks(response))
+
+		// Exit after one response in non-interactive (JSON) mode
+		if cliHandler.GetJSON() && err == nil {
+			break
+		}
 	}
 }
 
